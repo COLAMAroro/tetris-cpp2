@@ -1,0 +1,166 @@
+#include <ncurses.h>
+#include "tetromino.h"
+
+Tetris: namespace = {
+
+Game: type ={
+    operator=: (out this) = default;
+
+    render: (this) = {
+        colorRendered := 0;
+        i := 0;
+
+        // render main board
+        tetromino.updateBoard();
+        gameWindow: *WINDOW = newwin(22, 22, 1, 2);
+        start_color();
+        gameWindow.wborder(ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_S1,
+                ACS_ULCORNER, ACS_URCORNER, ACS_S1, ACS_S1);
+        for (range(0, 20)) do: (i:_) = {
+            for (range(0, 10)) do: (j:_) = {
+                colorRendered = board[i][j] + tetromino.board[i+4][j];
+                gameWindow.wattron(COLOR_PAIR(colorRendered));
+                gameWindow.mvwprintw(i + 1, j * 2 + 1, "  ");
+                gameWindow.wattroff(COLOR_PAIR(colorRendered));
+            }
+        }
+        gameWindow.wrefresh();
+
+        // render score and level
+        statsWindow: *WINDOW = newwin(4, 19, 1, 30);
+        statsWindow.box(0, 0);
+        statsWindow.mvwprintw(1, 2, "level: %d", level + 1);
+        statsWindow.mvwprintw(2, 2, "score: %d", score);
+        statsWindow.wrefresh();
+
+        // render next tetromino
+        nextWindow: *WINDOW = newwin(7, 15, 7, 32);
+        nextWindow.box(0, 0);
+        for (range(1, 5)) do: (i:_) = {
+            for (range(3, 7)) do: (j:_) = {
+                colorRendered = nextTetromino.board[i][j];
+                nextWindow.wattron(COLOR_PAIR(colorRendered));
+                nextWindow.mvwprintw(i + 1, (j - 1) * 2, "  ");
+                nextWindow.wattroff(COLOR_PAIR(colorRendered));
+            }
+        }
+        nextWindow.wrefresh();
+    };
+
+    updateState: (this) = {
+        // check collisions with the bottom border
+        bool collide = !tetromino.moveDown();
+        // check collisions with other tetrominoes
+        if (collideWithTetrominoes()) {
+            tetromino.moveUp();
+            collide = true;
+        }
+
+        // fix tetromino, update score and spawn a new tetromino
+        if (collide){
+            tetromino.updateBoard();
+            for (range(0, 20)) do: (i:_) = {
+                for (range(0, 10)) do: (j:_) = {
+                    if (board[i][j] == 0) {
+                        board[i][j] = tetromino.board[i+4][j];
+                    }
+                }
+            }
+            updateScore();
+            tetromino = nextTetromino;
+            nextTetromino = Tetromino();
+        }
+    }
+
+    trasformTetromino: (this, key: int) = {
+        switch (key) {
+            case KEY_UP:
+                tetromino.rotate();
+                if (collideWithTetrominoes()) tetromino.rotate(true);
+                break;
+            case KEY_RIGHT:
+                tetromino.moveRight();
+                if (collideWithTetrominoes()) tetromino.moveLeft();
+                break;
+            case KEY_LEFT:
+                tetromino.moveLeft();
+                if (collideWithTetrominoes()) tetromino.moveRight();
+                break;
+            case KEY_DOWN:
+                tetromino.moveDown();
+                if (collideWithTetrominoes()) tetromino.moveUp();
+                break;
+        }
+    }
+    
+    level: int = 0;
+
+    private collideWithTetrominoes: (this) -> bool = {
+        tetromino.updateBoard();
+        for (range(0, 20)) do: (i:_) = {
+            for (range(0, 10)) do: (j:_) = {
+                if (board[i][j] != 0 && tetromino.board[i+4][j] != 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private isRowCompleted: (this, row: int) -> bool = {
+        for (range(0, 10)) do: (j:_) = {
+            if (board[row][j] == 0) return false;
+        }
+        completedRows += 1;
+        return true;
+    }
+
+    private deleteRow: (this, row: int) = {
+        i := row;
+        while (i > 0) next (i -= 1) {
+            for (range(0, 10)) do: (j:_) = {
+                board[i][j] = board[i-1][j];
+            }
+        }
+    }
+
+    private updateScore: (this) = {
+        int rowCleared = 0;
+        for (range(0, 20)) do: (i:_) = {
+            if (isRowCompleted(i)) {
+                deleteRow(i);
+                rowCleared += 1;
+            }
+        }
+
+        // Original Nintendo scoring system
+        switch (rowCleared) {
+            case 1:
+                score += 40 * (level + 1);
+                break;
+            case 2:
+                score += 100 * (level + 1);
+                break;
+            case 3:
+                score += 300 * (level + 1);
+                break;
+            case 4:
+                score += 1200 * (level + 1);
+                break;
+        };
+
+        // level up
+        if (completedRows % 10 > 9 && level < 9) level += 1;
+    }
+
+    private range: (start: int, end: int) -> std::views = std::views::iota(start, end);
+
+    private board: std::array<std::array<int, 10>, 20> = {};
+
+    private completedRows: int = 0;
+    private score: int = 0;
+    private tetromino: Tetromino = {};
+    private nextTetromino: Tetromino = {};
+}
+
+}

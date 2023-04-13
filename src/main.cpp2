@@ -1,0 +1,35 @@
+#include <ncurses.h>
+#include <ranges>
+
+import game;
+
+main: () -> int = {
+    game: Tetris::Game = ();
+
+    initscr();
+    start_color();
+    for (std::views::iota(0, 8)) do: (in i: int) =
+        init_pair(i, 0, i);
+    noecho();
+    curs_set(0);
+    keypad(stdscr, TRUE);
+    halfdelay(1);
+
+    do {
+        i: int = 0;
+        while (game.level < 10 && i < (10 - game.level)) next (i+=1) {
+            // std::cout << "Pre-anything" << std::endl;
+            input: int = getch();
+            // std::cout << "Post-getch" << std::endl;
+            game.trasformTetromino(input);
+            // std::cout << "Post-transform" << std::endl;
+            game.render();
+            // std::cout << "Post-render" << std::endl;
+        }
+        game.updateState();
+    } while (true);
+
+    endwin();
+
+
+}
