@@ -1,7 +1,7 @@
 CPPFRONT	:= cppfront
 
 CPP2SRC		=	game.cpp2	\
-				main.cpp2
+			main.cpp2
 
 CXXFLAGS	+= -std=c++20 -fmodules-ts
 
@@ -10,11 +10,11 @@ CXXFLAGS	+= -std=c++20 -fmodules-ts
 
 CPP2toCPP 	= $(CPP2SRC:.cpp2=.cpp)
 
-SRC			=	tetromino.cpp \
-				$(CPP2toCPP)
+SRC		=	tetromino.cpp \
+			$(CPP2toCPP)
 
 
-OBJ			=	$(SRC:.cpp=.o)
+OBJ		=	$(SRC:.cpp=.o)
 
 NAME		=	tetris
 
